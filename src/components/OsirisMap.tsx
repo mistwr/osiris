@@ -281,6 +281,25 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
     };
   }, [mapReady, luminPortugalWeather]);
 
+  // Opt-in location inspection: coordinates only; never identify household subscribers.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const onInspect = (event: Event) => {
+      const detail = (event as CustomEvent<{ enabled?: boolean }>).detail;
+      if (!detail?.enabled) return;
+      const onClick = (click: maplibregl.MapMouseEvent) => {
+        const { lat, lng } = click.lngLat;
+        if (lat < 32 || lat > 43 || lng < -32 || lng > -5) return;
+        window.dispatchEvent(new CustomEvent('lumin:telecom-location', { detail: { lat, lng } }));
+      };
+      map.once('click', onClick);
+      window.dispatchEvent(new CustomEvent('lumin:telecom-inspect-armed'));
+    };
+    window.addEventListener('lumin:telecom-inspect', onInspect);
+    return () => window.removeEventListener('lumin:telecom-inspect', onInspect);
+  }, [mapReady]);
+
   // Official ANACOM coverage comparison: two read-only raster overlays.
   useEffect(() => {
     const map = mapRef.current;
