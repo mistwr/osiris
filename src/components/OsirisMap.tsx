@@ -212,40 +212,72 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
   const openAlertPinRef = useRef<((id: string) => void) | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
-  // LUMIN Portugal: official forecast reference point (not a live event).
+  // LUMIN Portugal: official IPMA city coordinates, not live incident markers.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    const sourceId = 'lumin-ipma-porto';
-    const layerId = 'lumin-ipma-porto-dot';
-    const geojson = { type: 'FeatureCollection' as const, features: [{
-      type: 'Feature' as const,
-      properties: { title: 'IPMA · Porto', kind: 'forecast' },
-      geometry: { type: 'Point' as const, coordinates: [-8.6291, 41.1579] as [number, number] },
-    }] };
-    const sync = () => {
-      if (!map.isStyleLoaded()) return;
-      if (!map.getSource(sourceId)) map.addSource(sourceId, { type: 'geojson', data: geojson });
+    const sourceId = 'lumin-ipma-cities';
+    const layerId = 'lumin-ipma-city-points';
+    const controller = new AbortController();
+    let disposed = false;
+    type City = { id: number; name: string; lat: number; lng: number };
+    const sync = (cities: City[]) => {
+      if (disposed || !map.isStyleLoaded()) return;
+      const data = {
+        type: 'FeatureCollection' as const,
+        features: cities.map(city => ({
+          type: 'Feature' as const,
+          geometry: { type: 'Point' as const, coordinates: [city.lng, city.lat] },
+          properties: { cityId: city.id, name: city.name },
+        })),
+      };
+      const source = map.getSource(sourceId) as maplibregl.GeoJSONSource | undefined;
+      if (source) source.setData(data);
+      else map.addSource(sourceId, { type: 'geojson', data });
       if (!map.getLayer(layerId)) map.addLayer({
         id: layerId, type: 'circle', source: sourceId,
-        paint: { 'circle-radius': 8, 'circle-color': '#f59e0b', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 },
+        paint: {
+          'circle-radius': 5,
+          'circle-color': '#f59e0b',
+          'circle-stroke-color': '#ffffff',
+          'circle-stroke-width': 1,
+        },
       });
       map.setLayoutProperty(layerId, 'visibility', luminPortugalWeather ? 'visible' : 'none');
     };
-    const showForecast = (event: maplibregl.MapMouseEvent) => {
-      const point = map.queryRenderedFeatures(event.point, { layers: [layerId] })[0];
-      if (!point) return;
+    let cities: City[] = [];
+    const refresh = () => sync(cities);
+    fetch('/api/lumin/portugal/cities', { signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) throw new Error('IPMA catalogue unavailable');
+        return response.json();
+      })
+      .then(result => {
+        if (disposed) return;
+        cities = Array.isArray(result.cities) ? result.cities : [];
+        refresh();
+      })
+      .catch(() => { /* Keep original globe usable if IPMA is unavailable. */ });
+    const onClick = (event: maplibregl.MapMouseEvent) => {
+      if (!map.getLayer(layerId) || !luminPortugalWeather) return;
+      const feature = map.queryRenderedFeatures(event.point, { layers: [layerId] })[0];
+      if (!feature) return;
+      const name = String(feature.properties?.name ?? 'Portugal');
+      const cityId = String(feature.properties?.cityId ?? '');
       new maplibregl.Popup({ closeOnClick: true })
-        .setLngLat([-8.6291, 41.1579])
-        .setText('IPMA · Porto — previsão meteorológica. Abra o painel LUMIN · PORTUGAL para consultar os próximos dias.')
+        .setLngLat(event.lngLat)
+        .setText('IPMA · ' + name + ' — previsão disponível no painel LUMIN · PORTUGAL.')
         .addTo(map);
+      window.dispatchEvent(new CustomEvent('lumin:select-ipma-city', { detail: { cityId } }));
     };
-    if (map.isStyleLoaded()) sync();
-    map.on('style.load', sync);
-    map.on('click', showForecast);
+    if (map.isStyleLoaded()) refresh();
+    map.on('style.load', refresh);
+    map.on('click', onClick);
     return () => {
-      map.off('style.load', sync);
-      map.off('click', showForecast);
+      disposed = true;
+      controller.abort();
+      map.off('style.load', refresh);
+      map.off('click', onClick);
     };
   }, [mapReady, luminPortugalWeather]);
 
