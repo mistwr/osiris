@@ -8,7 +8,7 @@ type Weather = { location: string; forecast: Forecast[]; sourceUrl: string };
 export default function LuminPortugalWeather() {
   const [open, setOpen] = useState(false);
   const [cities, setCities] = useState<City[]>([]);
-  const [cityId, setCityId] = useState('1110600');
+  const [cityId, setCityId] = useState('1131200');
   const [weather, setWeather] = useState<Weather | null>(null);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
