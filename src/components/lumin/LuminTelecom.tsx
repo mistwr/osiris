@@ -10,6 +10,7 @@ export default function LuminTelecom() {
   const [layers, setLayers] = useState<CoverageLayer[]>([]);
   const [operator, setOperator] = useState('MEO');
   const [technology, setTechnology] = useState('5G');
+  const [compareOperator, setCompareOperator] = useState('');
   const [enabled, setEnabled] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => {
@@ -23,10 +24,11 @@ export default function LuminTelecom() {
   }, [open]);
   useEffect(() => {
     const selected = layers.find(item => item.operator === operator && item.technology === technology);
+    const comparison = layers.find(item => item.operator === compareOperator && item.technology === technology);
     window.dispatchEvent(new CustomEvent('lumin:telecom-coverage', {
-      detail: { enabled: enabled && Boolean(selected), layerId: selected?.layerId ?? null },
+      detail: { enabled: enabled && Boolean(selected), layerId: selected?.layerId ?? null, compareLayerId: enabled ? comparison?.layerId ?? null : null },
     }));
-  }, [layers, operator, technology, enabled]);
+  }, [layers, operator, technology, enabled, compareOperator]);
   return <div className="absolute bottom-20 right-3 z-[351] text-xs" data-hud>
     <button type="button" onClick={() => setOpen(value => !value)}
       className="rounded-md border border-cyan-500/50 bg-slate-950/90 px-3 py-2 text-cyan-200 shadow-lg">
@@ -44,6 +46,12 @@ export default function LuminTelecom() {
           {technologies.map(value => <option key={value}>{value}</option>)}
         </select>
       </label>
+      <label className="block">Comparar com
+        <select value={compareOperator} onChange={e => setCompareOperator(e.target.value)} className="mb-2 w-full rounded bg-slate-800 p-2">
+          <option value="">Sem comparação</option>
+          {operators.filter(value => value !== operator).map(value => <option key={value}>{value}</option>)}
+        </select>
+      </label>
       <label className="flex items-center gap-2">
         <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} /> Mostrar no globo
       </label>
@@ -51,6 +59,7 @@ export default function LuminTelecom() {
       {!error && layers.length === 0 && <p className="mt-2 text-slate-400">A carregar camadas…</p>}
       {layers.length > 0 && !layers.some(item => item.operator === operator && item.technology === technology) &&
         <p className="mt-2 text-amber-300">Esta combinação não está disponível no catálogo.</p>}
+      {compareOperator && !layers.some(item => item.operator === compareOperator && item.technology === technology) && <p className="mt-2 text-amber-300">Sem camada de comparação para esta tecnologia.</p>}
       <p className="mt-3 text-slate-400">Cobertura potencial, não sinal em tempo real. Fonte: GEO.ANACOM.</p>
     </section>}
   </div>;
