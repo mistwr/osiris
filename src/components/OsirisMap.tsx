@@ -212,29 +212,41 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
   const openAlertPinRef = useRef<((id: string) => void) | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
-  // LUMIN Portugal: a labelled IPMA forecast location on the existing MapLibre globe.
-  // This is a forecast marker, NOT a live weather event.
+  // LUMIN Portugal: official forecast reference point (not a live event).
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const sourceId = 'lumin-ipma-porto';
     const layerId = 'lumin-ipma-porto-dot';
-    const data = { type: 'FeatureCollection' as const, features: [{
+    const geojson = { type: 'FeatureCollection' as const, features: [{
       type: 'Feature' as const,
       properties: { title: 'IPMA · Porto', kind: 'forecast' },
       geometry: { type: 'Point' as const, coordinates: [-8.6291, 41.1579] as [number, number] },
     }] };
     const sync = () => {
-      if (!map.getSource(sourceId)) map.addSource(sourceId, { type: 'geojson', data });
+      if (!map.isStyleLoaded()) return;
+      if (!map.getSource(sourceId)) map.addSource(sourceId, { type: 'geojson', data: geojson });
       if (!map.getLayer(layerId)) map.addLayer({
         id: layerId, type: 'circle', source: sourceId,
         paint: { 'circle-radius': 8, 'circle-color': '#f59e0b', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 },
       });
       map.setLayoutProperty(layerId, 'visibility', luminPortugalWeather ? 'visible' : 'none');
     };
+    const showForecast = (event: maplibregl.MapMouseEvent) => {
+      const point = map.queryRenderedFeatures(event.point, { layers: [layerId] })[0];
+      if (!point) return;
+      new maplibregl.Popup({ closeOnClick: true })
+        .setLngLat([-8.6291, 41.1579])
+        .setText('IPMA · Porto — previsão meteorológica. Abra o painel LUMIN · PORTUGAL para consultar os próximos dias.')
+        .addTo(map);
+    };
     if (map.isStyleLoaded()) sync();
     map.on('style.load', sync);
-    return () => { map.off('style.load', sync); };
+    map.on('click', showForecast);
+    return () => {
+      map.off('style.load', sync);
+      map.off('click', showForecast);
+    };
   }, [mapReady, luminPortugalWeather]);
 
   // Do not replay an earlier explicit zoom request after theme/retry remounts.
