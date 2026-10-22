@@ -281,38 +281,48 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
     };
   }, [mapReady, luminPortugalWeather]);
 
-  // Public ANACOM map service. Overlay displays coverage estimates, never subscriber positions.
+  // Official ANACOM coverage comparison: two read-only raster overlays.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    const sourceId = 'lumin-anacom-coverage';
-    const layerId = 'lumin-anacom-coverage-raster';
-    let selected: number | null = null;
-    let enabled = false;
-    const apply = () => {
+    let selection: [number | null, number | null] = [null, null];
+    const render = () => {
       if (!map.isStyleLoaded()) return;
-      if (map.getLayer(layerId)) map.removeLayer(layerId);
-      if (map.getSource(sourceId)) map.removeSource(sourceId);
-      if (!enabled || selected === null) return;
-      const url = 'https://geo.anacom.pt/server/rest/services/publico/CoberturaQoS_Pub/MapServer/export'
-        + '?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256%2C256'
-        + '&format=png32&transparent=true&f=image&layers=show%3A' + selected;
-      map.addSource(sourceId, { type: 'raster', tiles: [url], tileSize: 256 });
-      map.addLayer({ id: layerId, type: 'raster', source: sourceId, paint: { 'raster-opacity': 0.62 } });
+      selection.forEach((selected, index) => {
+        const sourceId = 'lumin-anacom-' + index;
+        const layerId = sourceId + '-raster';
+        if (map.getLayer(layerId)) map.removeLayer(layerId);
+        if (map.getSource(sourceId)) map.removeSource(sourceId);
+        if (selected === null) return;
+        const url = 'https://geo.anacom.pt/server/rest/services/publico/CoberturaQoS_Pub/MapServer/export'
+          + '?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256%2C256'
+          + '&format=png32&transparent=true&f=image&layers=show%3A' + selected;
+        map.addSource(sourceId, { type: 'raster', tiles: [url], tileSize: 256 });
+        map.addLayer({
+          id: layerId, type: 'raster', source: sourceId,
+          paint: { 'raster-opacity': index === 0 ? 0.6 : 0.36 },
+        });
+      });
     };
     const onCoverage = (event: Event) => {
-      const detail = (event as CustomEvent<{ enabled?: boolean; layerId?: number | null }>).detail;
-      enabled = Boolean(detail?.enabled);
-      selected = typeof detail?.layerId === 'number' ? detail.layerId : null;
-      apply();
+      const detail = (event as CustomEvent<{ enabled?: boolean; layerId?: number | null; compareLayerId?: number | null }>).detail;
+      selection = detail?.enabled
+        ? [typeof detail.layerId === 'number' ? detail.layerId : null,
+           typeof detail.compareLayerId === 'number' ? detail.compareLayerId : null]
+        : [null, null];
+      render();
     };
     window.addEventListener('lumin:telecom-coverage', onCoverage);
-    map.on('style.load', apply);
+    map.on('style.load', render);
     return () => {
       window.removeEventListener('lumin:telecom-coverage', onCoverage);
-      map.off('style.load', apply);
-      if (map.getLayer(layerId)) map.removeLayer(layerId);
-      if (map.getSource(sourceId)) map.removeSource(sourceId);
+      map.off('style.load', render);
+      for (let index = 0; index < 2; index++) {
+        const sourceId = 'lumin-anacom-' + index;
+        const layerId = sourceId + '-raster';
+        if (map.getLayer(layerId)) map.removeLayer(layerId);
+        if (map.getSource(sourceId)) map.removeSource(sourceId);
+      }
     };
   }, [mapReady]);
 
