@@ -13,6 +13,17 @@ export default function LuminTelecom() {
   const [compareOperator, setCompareOperator] = useState('');
   const [enabled, setEnabled] = useState(false);
   const [error, setError] = useState('');
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [inspectArmed, setInspectArmed] = useState(false);
+  useEffect(() => {
+    const onLocation = (event: Event) => {
+      setLocation((event as CustomEvent<{ lat: number; lng: number }>).detail);
+      setInspectArmed(false);
+      setOpen(true);
+    };
+    window.addEventListener('lumin:telecom-location', onLocation);
+    return () => window.removeEventListener('lumin:telecom-location', onLocation);
+  }, []);
   useEffect(() => {
     if (!open) return;
     const controller = new AbortController();
@@ -60,6 +71,16 @@ export default function LuminTelecom() {
       {layers.length > 0 && !layers.some(item => item.operator === operator && item.technology === technology) &&
         <p className="mt-2 text-amber-300">Esta combinação não está disponível no catálogo.</p>}
       {compareOperator && !layers.some(item => item.operator === compareOperator && item.technology === technology) && <p className="mt-2 text-amber-300">Sem camada de comparação para esta tecnologia.</p>}
+      <button type="button" className="mt-3 w-full rounded border border-cyan-500/50 bg-cyan-900/30 p-2 text-cyan-100"
+        onClick={() => { setInspectArmed(true); window.dispatchEvent(new CustomEvent('lumin:telecom-inspect', { detail: { enabled: true } })); }}>
+        {inspectArmed ? 'Agora clica num ponto do mapa…' : '📍 Consultar ponto no mapa'}
+      </button>
+      {location && <div className="mt-2 rounded border border-slate-600 p-2">
+        <p className="font-semibold">Ponto selecionado</p>
+        <p className="font-mono">{location.lat.toFixed(5)}, {location.lng.toFixed(5)}</p>
+        <p className="mt-1 text-slate-300">A cobertura indicada no globo é uma estimativa cartográfica. Não identifica a operadora contratada nesta morada.</p>
+        <a className="mt-1 block text-cyan-300 underline" href={`https://www.google.com/maps?q=${location.lat},${location.lng}`} target="_blank" rel="noopener noreferrer">Ver localização</a>
+      </div>}
       <p className="mt-3 text-slate-400">Cobertura potencial, não sinal em tempo real. Fonte: GEO.ANACOM.</p>
     </section>}
   </div>;
