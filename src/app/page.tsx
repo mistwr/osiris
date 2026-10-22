@@ -28,6 +28,7 @@ import WorldRemote from '@/components/WorldRemote';
 import ArcGISPanel from '@/components/ArcGISPanel';
 import LuminPortugalWeather from '@/components/lumin/LuminPortugalWeather';
 import LuminTelecom from '@/components/lumin/LuminTelecom';
+import LuminEnergy from '@/components/lumin/LuminEnergy';
 const OsirisMap = dynamic(() => import('@/components/OsirisMap'), { ssr: false });
 const LayerPanel = dynamic(() => import('@/components/LayerPanel'));
 const SpaceCam = dynamic(() => import('@/components/SpaceCam'), { ssr: false });
@@ -1559,6 +1560,7 @@ export default function Dashboard() {
 
       <LuminPortugalWeather />
       <LuminTelecom />
+      <LuminEnergy />
 
       {/* ── MAP ── */}
       <ErrorBoundary name="Map">
