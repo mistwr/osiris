@@ -14,6 +14,19 @@ export default function LuminPortugalWeather() {
   const [retry, setRetry] = useState(0);
 
   useEffect(() => {
+    const select = (event: Event) => {
+      const detail = (event as CustomEvent<{ cityId?: string }>).detail;
+      if (!detail?.cityId) return;
+      setCityId(detail.cityId);
+      setWeather(null);
+      setError('');
+      setOpen(true);
+    };
+    window.addEventListener('lumin:select-ipma-city', select);
+    return () => window.removeEventListener('lumin:select-ipma-city', select);
+  }, []);
+
+  useEffect(() => {
     if (!open) return;
     const controller = new AbortController();
     fetch('/api/lumin/portugal/cities', { signal: controller.signal })
