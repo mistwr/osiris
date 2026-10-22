@@ -2,10 +2,10 @@ import type { Metadata, Viewport } from "next";
 import ErrorBoundary from '@/components/ErrorBoundary';
 import "./globals.css";
 
-const SITE_URL = "https://osirisai.live";
-const SITE_NAME = "OSIRIS";
-const SITE_TITLE = "OSIRIS — Open Source Intelligence Platform | Live Flight Tracking, CCTV, OSINT Tools & More";
-const SITE_DESCRIPTION = "The open-source Palantir alternative. Track live aircraft, satellites, and worldwide CCTV cameras on a 3D globe. Run Nmap scans, DNS lookups, WHOIS queries, SSL cert analysis & threat intelligence — all from your browser. 20+ data sources including live earthquake, wildfire, cyber threat and conflict feeds, plus mapped reference data such as nuclear facilities. Free & open source.";
+const SITE_URL = "https://lumin-vision.netlify.app";
+const SITE_NAME = "LUMIN AI VISION";
+const SITE_TITLE = "LUMIN AI VISION — Globo de inteligência geográfica e telecomunicações";
+const SITE_DESCRIPTION = "LUMIN AI VISION: exploração geográfica aberta, meteorologia IPMA e cobertura oficial de telecomunicações em Portugal, com proteção de dados e transparência.";
 
 export const viewport: Viewport = {
   themeColor: "#D4AF37",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default: SITE_TITLE,
-    template: "%s | OSIRIS Intelligence",
+    template: "%s | LUMIN AI VISION",
   },
   description: SITE_DESCRIPTION,
   keywords: [
@@ -54,9 +54,9 @@ export const metadata: Metadata = {
     // Brand
     "osiris", "osirisai", "osirisai.live",
   ],
-  authors: [{ name: "Osiris Project", url: SITE_URL }],
-  creator: "Osiris Project",
-  publisher: "Osiris Project",
+  authors: [{ name: "LUMIN AI VISION", url: SITE_URL }],
+  creator: "LUMIN AI VISION",
+  publisher: "LUMIN AI VISION",
   robots: {
     index: true,
     follow: true,
@@ -91,7 +91,7 @@ export const metadata: Metadata = {
     canonical: SITE_URL,
   },
   openGraph: {
-    title: "OSIRIS — The Open-Source Palantir Alternative | Live Flights, CCTV, Satellites & OSINT Tools",
+    title: SITE_TITLE,
     description: "Track 10K+ aircraft, 2K satellites & worldwide CCTV on a 3D globe. Run Nmap, DNS, WHOIS & threat intel scans from your browser. 20+ live intelligence feeds. Free. Open source.",
     type: "website",
     siteName: SITE_NAME,
@@ -120,7 +120,7 @@ export const metadata: Metadata = {
   other: {
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "black-translucent",
-    "apple-mobile-web-app-title": "OSIRIS",
+    "apple-mobile-web-app-title": "LUMIN AI VISION",
     "mobile-web-app-capable": "yes",
     "msapplication-TileColor": "#06060C",
     "msapplication-config": "none",
@@ -132,7 +132,7 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   name: "OSIRIS — OSINT Toolkit & Intelligence Platform",
-  alternateName: ["OSIRIS", "OsirisAI", "Osiris OSINT"],
+  alternateName: ["LUMIN AI VISION", "OsirisAI", "Osiris OSINT"],
   url: SITE_URL,
   description: SITE_DESCRIPTION,
   applicationCategory: "SecurityApplication",
@@ -169,7 +169,7 @@ const jsonLd = {
   screenshot: `${SITE_URL}/og-image.png`,
   author: {
     "@type": "Organization",
-    name: "Osiris Project",
+    name: "LUMIN AI VISION",
     url: SITE_URL,
   },
 };
