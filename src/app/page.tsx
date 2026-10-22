@@ -1561,6 +1561,7 @@ export default function Dashboard() {
       {/* ── MAP ── */}
       <ErrorBoundary name="Map">
         <OsirisMap 
+          luminPortugalWeather={true}
           key={osirisTheme}
           data={data} 
           activeLayers={activeLayers} 
