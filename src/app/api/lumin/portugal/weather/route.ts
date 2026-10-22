@@ -5,7 +5,7 @@ const BASE = 'https://api.ipma.pt/open-data/forecast/meteorology/cities/daily/';
 
 export async function GET(request: NextRequest) {
   try {
-    const cityId = request.nextUrl.searchParams.get('city') || '1110600';
+    const cityId = request.nextUrl.searchParams.get('city') || '1131200';
     const cities = await fetchIpmaCities();
     const city = cities.find(item => String(item.idGlobal) === cityId);
     if (!city) return NextResponse.json({ error: 'Unknown IPMA city' }, { status: 400 });
