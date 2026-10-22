@@ -124,6 +124,7 @@ interface OsirisMapProps {
   onOiFollow?: (following: boolean) => void;
   /** What OI Assist has marked on the map: found things, named places, a searched area. */
   oiHighlight?: Highlight | null;
+  luminPortugalWeather?: boolean;
 }
 
 function computeSolarTerminator(): [number, number][] {
@@ -201,7 +202,7 @@ interface AlertPinFeature {
   properties: AlertPinProps;
 }
 
-function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightClick, onViewStateChange, onReady, flyToLocation, alertPinIds = null, projection = 'globe', terrainEnabled = false, terrainRetry = 0, terrainFocus = 0, onTerrainStatusChange, onLayerOff, mapStyle = 'dark', sweepData, scanTargets = [], demoMode = false, theme = 'core', drawnPolygons = [], arcgisLayers = [], drawMode = null, onDrawComplete, onDrawProgress, onDrawCancel, drawCommand = null, onMapCenter, onTransitStatus, route = null, userLocation = null, followUser = false, onFollowInterrupt, navigating = false, aircraftAirports = {}, onOiGlobe, onOiSelect, onOiHover, onOiFollow, oiHighlight = null }: OsirisMapProps) {
+function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightClick, onViewStateChange, onReady, flyToLocation, alertPinIds = null, projection = 'globe', terrainEnabled = false, terrainRetry = 0, terrainFocus = 0, onTerrainStatusChange, onLayerOff, mapStyle = 'dark', sweepData, scanTargets = [], demoMode = false, theme = 'core', drawnPolygons = [], arcgisLayers = [], drawMode = null, onDrawComplete, onDrawProgress, onDrawCancel, drawCommand = null, onMapCenter, onTransitStatus, route = null, userLocation = null, followUser = false, onFollowInterrupt, navigating = false, aircraftAirports = {}, onOiGlobe, onOiSelect, onOiHover, onOiFollow, oiHighlight = null, luminPortugalWeather = false }: OsirisMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
@@ -210,6 +211,31 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
   const alertPinsRef = useRef<AlertPinFeature[]>([]);
   const openAlertPinRef = useRef<((id: string) => void) | null>(null);
   const [mapReady, setMapReady] = useState(false);
+
+  // LUMIN Portugal: a labelled IPMA forecast location on the existing MapLibre globe.
+  // This is a forecast marker, NOT a live weather event.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const sourceId = 'lumin-ipma-porto';
+    const layerId = 'lumin-ipma-porto-dot';
+    const data = { type: 'FeatureCollection' as const, features: [{
+      type: 'Feature' as const,
+      properties: { title: 'IPMA · Porto', kind: 'forecast' },
+      geometry: { type: 'Point' as const, coordinates: [-8.6291, 41.1579] as [number, number] },
+    }] };
+    const sync = () => {
+      if (!map.getSource(sourceId)) map.addSource(sourceId, { type: 'geojson', data });
+      if (!map.getLayer(layerId)) map.addLayer({
+        id: layerId, type: 'circle', source: sourceId,
+        paint: { 'circle-radius': 8, 'circle-color': '#f59e0b', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 },
+      });
+      map.setLayoutProperty(layerId, 'visibility', luminPortugalWeather ? 'visible' : 'none');
+    };
+    if (map.isStyleLoaded()) sync();
+    map.on('style.load', sync);
+    return () => { map.off('style.load', sync); };
+  }, [mapReady, luminPortugalWeather]);
 
   // Do not replay an earlier explicit zoom request after theme/retry remounts.
   const lastTerrainFocus = useRef(terrainFocus);
