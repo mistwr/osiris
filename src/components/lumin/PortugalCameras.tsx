@@ -11,13 +11,19 @@ const inPortugal = (camera: Camera) => {
   return Number.isFinite(lat) && Number.isFinite(lng) && (mainland || madeira || azores);
 };
 
+const VERIFIED_CATALOG_LINKS: Camera[] = [
+  { id: 'pubcam-portugal-aeroporto-da-madeira-madeira-airport-live', lat: 32.698962, lng: -16.773031, name: 'Madeira Airport Live', city: 'Santa Cruz · Madeira', country: 'Portugal', external_url: 'https://www.youtube.com/@madeiraairportlive/live', source: 'YouTube · operador' },
+  { id: 'pubcam-portugal-aeroporto-humberto-delgado-lisbon-airport-wings', lat: 38.780998, lng: -9.131861, name: 'Lisbon Airport Wings', city: 'Lisboa · Aeroporto', country: 'Portugal', external_url: 'https://www.youtube.com/@AirportWingsLisbon/live', source: 'YouTube · operador' },
+  { id: 'pubcam-portugal-funchal-madeira-web-live', lat: 32.64965, lng: -16.908678, name: 'Madeira Web Live', city: 'Funchal · Madeira', country: 'Portugal', external_url: 'https://www.youtube.com/@MadeiraWebLive/live', source: 'YouTube · operador' },
+];
+
 export default function PortugalCameras({ cameras, onLocate }: {
   cameras: Camera[];
   onLocate: (lat: number, lng: number) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const available = useMemo(() => cameras.filter(camera => inPortugal(camera) && Boolean(camera.feed_url || camera.stream_url || camera.external_url)), [cameras]);
+  const available = useMemo(() => { const merged = new Map<string, Camera>(); for (const camera of [...VERIFIED_CATALOG_LINKS, ...cameras]) { if (inPortugal(camera) && Boolean(camera.feed_url || camera.stream_url || camera.external_url)) merged.set(String(camera.id), camera); } return [...merged.values()]; }, [cameras]);
   const shown = useMemo(() => available.filter(camera =>
     [camera.name, camera.city, camera.source].some(value => String(value ?? '').toLocaleLowerCase('pt-PT').includes(search.toLocaleLowerCase('pt-PT')))
   ).slice(0, 80), [available, search]);
@@ -28,15 +34,17 @@ export default function PortugalCameras({ cameras, onLocate }: {
     </button>
     {open && <section className="mt-2 w-[min(90vw,350px)] max-h-[55dvh] overflow-y-auto rounded-xl border border-cyan-500/50 bg-slate-950/95 p-3 text-white shadow-xl">
       <h2 className="mb-1 text-base font-semibold">Portugal no globo</h2>
-      <p className="mb-2 text-slate-300">{available.length} câmaras com URL de feed no catálogo mundial. Cada entrada tem uma ligação própria; a disponibilidade da transmissão não é garantida.</p>
+      <p className="mb-2 text-slate-300">{available.length} câmaras com URL de feed no catálogo mundial. Fontes identificadas no catálogo. Uma ligação não garante que o vídeo esteja em direto.</p>
       <input type="search" aria-label="Pesquisar câmaras de Portugal" placeholder="Pesquisar cidade ou câmara" value={search} onChange={event => setSearch(event.target.value)}
         className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-800 p-2 text-white"/>
-      {shown.map(camera => <button key={camera.id} type="button"
-        onClick={() => onLocate(Number(camera.lat), Number(camera.lng ?? camera.lon))}
-        className="mb-1 flex w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-900 p-2 text-left">
+      {shown.map(camera => <div key={camera.id}
+        className="mb-1 flex w-full items-center justify-between gap-2 rounded-lg border border-slate-700 bg-slate-900 p-2 text-left">
         <span><strong>{camera.name || camera.city || 'Câmara pública'}</strong><span className="block text-slate-400">{camera.city || camera.source || 'Portugal'}</span></span>
-        <span className="ml-2 text-cyan-300">Localizar ↗</span>
-      </button>)}
+        <span className="flex shrink-0 items-center gap-2">
+          <button type="button" onClick={() => onLocate(Number(camera.lat), Number(camera.lng ?? camera.lon))} className="rounded border border-slate-500 px-2 py-1 text-cyan-300">Mapa</button>
+          {(camera.external_url || camera.feed_url || camera.stream_url) && <a href={camera.external_url || camera.feed_url || camera.stream_url} target="_blank" rel="noopener noreferrer" className="rounded border border-cyan-500 px-2 py-1 text-cyan-300">Abrir ↗</a>}
+        </span>
+      </div>)}
       {shown.length === 0 && <p className="p-2 text-slate-400">Não existem câmaras correspondentes no catálogo carregado. Não serão criados pins fictícios.</p>}
       <p className="mt-2 text-slate-400">Inclui continente, Madeira e Açores. Apenas fontes públicas integradas no catálogo mundial.</p>
     </section>}
