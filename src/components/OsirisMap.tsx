@@ -290,7 +290,13 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
     const sourceId = 'lumin-portugal-public-webcams';
     const layerId = sourceId + '-dots';
     const add = () => {
-      if (!map.isStyleLoaded() || map.getSource(sourceId)) return;
+      if (!map.isStyleLoaded()) return;
+      if (map.getLayer(layerId)) {
+        map.moveLayer(layerId);
+        map.setLayoutProperty(layerId, 'visibility', 'visible');
+        return;
+      }
+      if (map.getSource(sourceId)) map.removeSource(sourceId);
       map.addSource(sourceId, {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: PORTUGAL_PUBLIC_CAMERAS.map(cam => ({
@@ -300,7 +306,7 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
         })) },
       });
       map.addLayer({ id: layerId, type: 'circle', source: sourceId,
-        paint: { 'circle-radius': 5, 'circle-color': '#22d3ee', 'circle-stroke-color': '#071324', 'circle-stroke-width': 2 } });
+        paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, 5, 7, 9, 12, 12], 'circle-color': '#22d3ee', 'circle-stroke-color': '#071324', 'circle-stroke-width': 2.5, 'circle-opacity': 0.95 } });
     };
     const click = (event: maplibregl.MapLayerMouseEvent) => {
       const feature = event.features?.[0];
