@@ -1,5 +1,5 @@
-import { PORTUGAL_PUBLIC_CAMERAS } from '@/lib/lumin/portugal-public-cameras';
 'use client';
+import { PORTUGAL_PUBLIC_CAMERAS } from '@/lib/lumin/portugal-public-cameras';
 
 import { buildGeometry, closeRing, drawReducer, initialDrawState, measure, type DrawAction, type DrawMode, type DrawProgress, type DrawResult, type DrawState } from '@/lib/draw';
 import { useEffect, useRef, useState, useCallback, memo } from 'react';
