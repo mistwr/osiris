@@ -24,6 +24,7 @@ export default function PortugalCameras({ cameras, onLocate }: {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [area, setArea] = useState<'todas' | 'continente' | 'madeira' | 'acores'>('todas');
+  const [onlyDistinct, setOnlyDistinct] = useState(true);
   const available = useMemo(() => { const merged = new Map<string, Camera>(); for (const camera of [...VERIFIED_CATALOG_LINKS, ...cameras]) { if (inPortugal(camera) && Boolean(camera.feed_url || camera.stream_url || camera.external_url)) merged.set(String(camera.id), camera); } return [...merged.values()]; }, [cameras]);
   const shown = useMemo(() => available.filter(camera => {
     const lat = Number(camera.lat);
@@ -31,8 +32,10 @@ export default function PortugalCameras({ cameras, onLocate }: {
     const isMadeira = lat >= 32.3 && lat <= 33.3 && lng >= -17.5 && lng <= -16.0;
     const isAzores = lat >= 36.7 && lat <= 40.1 && lng >= -31.5 && lng <= -24.5;
     const matchesArea = area === 'todas' || (area === 'madeira' && isMadeira) || (area === 'acores' && isAzores) || (area === 'continente' && !isMadeira && !isAzores);
-    return matchesArea && [camera.name, camera.city, camera.source].some(value => String(value ?? '').toLocaleLowerCase('pt-PT').includes(search.toLocaleLowerCase('pt-PT')));
-  }).slice(0, 80), [available, search, area]);
+    const url = camera.external_url || camera.feed_url || camera.stream_url || '';
+    const distinct = !/^(https?:\/\/)?(www\.)?(beachcam\.meo\.pt|beachcam\.pt)\/?(?:\?.*)?$/i.test(url);
+    return matchesArea && (!onlyDistinct || distinct) && [camera.name, camera.city, camera.source].some(value => String(value ?? '').toLocaleLowerCase('pt-PT').includes(search.toLocaleLowerCase('pt-PT')));
+  }).slice(0, 80), [available, search, area, onlyDistinct]);
   return <div className="fixed bottom-24 right-3 z-[350] text-xs">
     <button type="button" onClick={() => { setOpen(value => !value); onLocate(39.55, -8.05); }}
       className="rounded-xl border border-cyan-400/60 bg-slate-950/95 px-4 py-3 font-bold text-cyan-100 shadow-lg">
@@ -49,6 +52,7 @@ export default function PortugalCameras({ cameras, onLocate }: {
           {value === 'acores' ? 'Açores' : value === 'todas' ? 'Todas' : value}
         </button>)}
       </div>
+      <label className="mb-3 flex items-center gap-2 text-slate-200"><input type="checkbox" checked={onlyDistinct} onChange={event => setOnlyDistinct(event.target.checked)} /> Ocultar ligações genéricas sem câmara identificada</label>
       {shown.map(camera => <div key={camera.id}
         className="mb-1 flex w-full items-center justify-between gap-2 rounded-lg border border-slate-700 bg-slate-900 p-2 text-left">
         <span><strong>{camera.name || camera.city || 'Câmara pública'}</strong><span className="block text-slate-400">{camera.city || camera.source || 'Portugal'}</span></span>
