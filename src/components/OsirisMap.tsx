@@ -1,3 +1,4 @@
+import { PORTUGAL_PUBLIC_CAMERAS } from '@/lib/lumin/portugal-public-cameras';
 'use client';
 
 import { buildGeometry, closeRing, drawReducer, initialDrawState, measure, type DrawAction, type DrawMode, type DrawProgress, type DrawResult, type DrawState } from '@/lib/draw';
@@ -280,6 +281,46 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
       map.off('click', onClick);
     };
   }, [mapReady, luminPortugalWeather]);
+
+  // Portugal: publicly advertised webcam locations, linked to their publishers.
+  // These are NOT direct camera feeds; pins mark beaches, not camera equipment.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const sourceId = 'lumin-portugal-public-webcams';
+    const layerId = sourceId + '-dots';
+    const add = () => {
+      if (!map.isStyleLoaded() || map.getSource(sourceId)) return;
+      map.addSource(sourceId, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: PORTUGAL_PUBLIC_CAMERAS.map(cam => ({
+          type: 'Feature' as const,
+          geometry: { type: 'Point' as const, coordinates: [cam.lng, cam.lat] },
+          properties: { name: cam.name, city: cam.city, url: cam.url, source: cam.source },
+        })) },
+      });
+      map.addLayer({ id: layerId, type: 'circle', source: sourceId,
+        paint: { 'circle-radius': 5, 'circle-color': '#22d3ee', 'circle-stroke-color': '#071324', 'circle-stroke-width': 2 } });
+    };
+    const click = (event: maplibregl.MapLayerMouseEvent) => {
+      const feature = event.features?.[0];
+      const props = feature?.properties;
+      if (!props || typeof props.url !== 'string') return;
+      new maplibregl.Popup({ closeButton: true })
+        .setLngLat(event.lngLat)
+        .setHTML('<strong>' + String(props.name ?? 'Webcam').replace(/[&<>"']/g, '') + '</strong><p>Localização aproximada da praia.</p><a target="_blank" rel="noopener noreferrer" href="https://beachcam.meo.pt/">Abrir MEO Beachcam ↗</a>')
+        .addTo(map);
+    };
+    add();
+    map.on('style.load', add);
+    map.on('click', layerId, click);
+    return () => {
+      map.off('style.load', add);
+      map.off('click', layerId, click);
+      if (map.getLayer(layerId)) map.removeLayer(layerId);
+      if (map.getSource(sourceId)) map.removeSource(sourceId);
+    };
+  }, [mapReady]);
 
   // Opt-in location inspection: coordinates only; never identify household subscribers.
   useEffect(() => {
