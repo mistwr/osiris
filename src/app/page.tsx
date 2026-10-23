@@ -27,8 +27,6 @@ import LiveAlerts from '@/components/LiveAlerts';
 import WorldRemote from '@/components/WorldRemote';
 import ArcGISPanel from '@/components/ArcGISPanel';
 import LuminPortugalWeather from '@/components/lumin/LuminPortugalWeather';
-import LuminTelecom from '@/components/lumin/LuminTelecom';
-import LuminEnergy from '@/components/lumin/LuminEnergy';
 const OsirisMap = dynamic(() => import('@/components/OsirisMap'), { ssr: false });
 const LayerPanel = dynamic(() => import('@/components/LayerPanel'));
 const SpaceCam = dynamic(() => import('@/components/SpaceCam'), { ssr: false });
@@ -1558,9 +1556,16 @@ export default function Dashboard() {
 
 
 
+      <button type="button"
+        onClick={() => {
+          setFlyToLocation({ lat: 39.55, lng: -8.05, zoom: 6.5, duration: 2600, ts: Date.now() });
+          setActiveLayers(prev => ({ ...prev, cctv: true }));
+        }}
+        className="fixed bottom-24 right-3 z-[350] rounded-xl border border-cyan-400/60 bg-slate-950/90 px-4 py-3 text-xs font-bold tracking-wide text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.22)] backdrop-blur"
+        title="Ver Portugal com as câmaras disponíveis no catálogo mundial">
+        🇵🇹 Portugal · Câmaras
+      </button>
       <LuminPortugalWeather />
-      <LuminTelecom />
-      <LuminEnergy />
 
       {/* ── MAP ── */}
       <ErrorBoundary name="Map">
