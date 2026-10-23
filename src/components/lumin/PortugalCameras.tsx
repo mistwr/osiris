@@ -23,10 +23,16 @@ export default function PortugalCameras({ cameras, onLocate }: {
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [area, setArea] = useState<'todas' | 'continente' | 'madeira' | 'acores'>('todas');
   const available = useMemo(() => { const merged = new Map<string, Camera>(); for (const camera of [...VERIFIED_CATALOG_LINKS, ...cameras]) { if (inPortugal(camera) && Boolean(camera.feed_url || camera.stream_url || camera.external_url)) merged.set(String(camera.id), camera); } return [...merged.values()]; }, [cameras]);
-  const shown = useMemo(() => available.filter(camera =>
-    [camera.name, camera.city, camera.source].some(value => String(value ?? '').toLocaleLowerCase('pt-PT').includes(search.toLocaleLowerCase('pt-PT')))
-  ).slice(0, 80), [available, search]);
+  const shown = useMemo(() => available.filter(camera => {
+    const lat = Number(camera.lat);
+    const lng = Number(camera.lng ?? camera.lon);
+    const isMadeira = lat >= 32.3 && lat <= 33.3 && lng >= -17.5 && lng <= -16.0;
+    const isAzores = lat >= 36.7 && lat <= 40.1 && lng >= -31.5 && lng <= -24.5;
+    const matchesArea = area === 'todas' || (area === 'madeira' && isMadeira) || (area === 'acores' && isAzores) || (area === 'continente' && !isMadeira && !isAzores);
+    return matchesArea && [camera.name, camera.city, camera.source].some(value => String(value ?? '').toLocaleLowerCase('pt-PT').includes(search.toLocaleLowerCase('pt-PT')));
+  }).slice(0, 80), [available, search, area]);
   return <div className="fixed bottom-24 right-3 z-[350] text-xs">
     <button type="button" onClick={() => { setOpen(value => !value); onLocate(39.55, -8.05); }}
       className="rounded-xl border border-cyan-400/60 bg-slate-950/95 px-4 py-3 font-bold text-cyan-100 shadow-lg">
@@ -34,9 +40,15 @@ export default function PortugalCameras({ cameras, onLocate }: {
     </button>
     {open && <section className="mt-2 w-[min(90vw,350px)] max-h-[55dvh] overflow-y-auto rounded-xl border border-cyan-500/50 bg-slate-950/95 p-3 text-white shadow-xl">
       <h2 className="mb-1 text-base font-semibold">Portugal no globo</h2>
-      <p className="mb-2 text-slate-300">{available.length} câmaras com URL de feed no catálogo mundial. Fontes identificadas no catálogo. Uma ligação não garante que o vídeo esteja em direto.</p>
+      <p className="mb-2 text-slate-300">{available.length} entradas com ligação no catálogo mundial. Fontes identificadas no catálogo. Uma ligação não garante que o vídeo esteja em direto.</p>
       <input type="search" aria-label="Pesquisar câmaras de Portugal" placeholder="Pesquisar cidade ou câmara" value={search} onChange={event => setSearch(event.target.value)}
         className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-800 p-2 text-white"/>
+      <div className="mb-3 grid grid-cols-4 gap-1">
+        {(['todas', 'continente', 'madeira', 'acores'] as const).map(value => <button key={value} type="button" onClick={() => setArea(value)}
+          className={`rounded border px-1 py-2 capitalize ${area === value ? 'border-cyan-300 bg-cyan-900/50 text-white' : 'border-slate-700 text-slate-300'}`}>
+          {value === 'acores' ? 'Açores' : value === 'todas' ? 'Todas' : value}
+        </button>)}
+      </div>
       {shown.map(camera => <div key={camera.id}
         className="mb-1 flex w-full items-center justify-between gap-2 rounded-lg border border-slate-700 bg-slate-900 p-2 text-left">
         <span><strong>{camera.name || camera.city || 'Câmara pública'}</strong><span className="block text-slate-400">{camera.city || camera.source || 'Portugal'}</span></span>
