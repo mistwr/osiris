@@ -1,4 +1,5 @@
 'use client';
+import { PORTUGAL_PUBLIC_CAMERAS } from '@/lib/lumin/portugal-public-cameras';
 
 import { buildGeometry, closeRing, drawReducer, initialDrawState, measure, type DrawAction, type DrawMode, type DrawProgress, type DrawResult, type DrawState } from '@/lib/draw';
 import { useEffect, useRef, useState, useCallback, memo } from 'react';
@@ -124,6 +125,7 @@ interface OsirisMapProps {
   onOiFollow?: (following: boolean) => void;
   /** What OI Assist has marked on the map: found things, named places, a searched area. */
   oiHighlight?: Highlight | null;
+  luminPortugalWeather?: boolean;
 }
 
 function computeSolarTerminator(): [number, number][] {
@@ -201,7 +203,7 @@ interface AlertPinFeature {
   properties: AlertPinProps;
 }
 
-function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightClick, onViewStateChange, onReady, flyToLocation, alertPinIds = null, projection = 'globe', terrainEnabled = false, terrainRetry = 0, terrainFocus = 0, onTerrainStatusChange, onLayerOff, mapStyle = 'dark', sweepData, scanTargets = [], demoMode = false, theme = 'core', drawnPolygons = [], arcgisLayers = [], drawMode = null, onDrawComplete, onDrawProgress, onDrawCancel, drawCommand = null, onMapCenter, onTransitStatus, route = null, userLocation = null, followUser = false, onFollowInterrupt, navigating = false, aircraftAirports = {}, onOiGlobe, onOiSelect, onOiHover, onOiFollow, oiHighlight = null }: OsirisMapProps) {
+function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightClick, onViewStateChange, onReady, flyToLocation, alertPinIds = null, projection = 'globe', terrainEnabled = false, terrainRetry = 0, terrainFocus = 0, onTerrainStatusChange, onLayerOff, mapStyle = 'dark', sweepData, scanTargets = [], demoMode = false, theme = 'core', drawnPolygons = [], arcgisLayers = [], drawMode = null, onDrawComplete, onDrawProgress, onDrawCancel, drawCommand = null, onMapCenter, onTransitStatus, route = null, userLocation = null, followUser = false, onFollowInterrupt, navigating = false, aircraftAirports = {}, onOiGlobe, onOiSelect, onOiHover, onOiFollow, oiHighlight = null, luminPortugalWeather = false }: OsirisMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
@@ -210,6 +212,139 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
   const alertPinsRef = useRef<AlertPinFeature[]>([]);
   const openAlertPinRef = useRef<((id: string) => void) | null>(null);
   const [mapReady, setMapReady] = useState(false);
+
+  // LUMIN Portugal: official IPMA city coordinates, not live incident markers.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const sourceId = 'lumin-ipma-cities';
+    const layerId = 'lumin-ipma-city-points';
+    const controller = new AbortController();
+    let disposed = false;
+    type City = { id: number; name: string; lat: number; lng: number };
+    const sync = (cities: City[]) => {
+      if (disposed || !map.isStyleLoaded()) return;
+      const data = {
+        type: 'FeatureCollection' as const,
+        features: cities.map(city => ({
+          type: 'Feature' as const,
+          geometry: { type: 'Point' as const, coordinates: [city.lng, city.lat] },
+          properties: { cityId: city.id, name: city.name },
+        })),
+      };
+      const source = map.getSource(sourceId) as maplibregl.GeoJSONSource | undefined;
+      if (source) source.setData(data);
+      else map.addSource(sourceId, { type: 'geojson', data });
+      if (!map.getLayer(layerId)) map.addLayer({
+        id: layerId, type: 'circle', source: sourceId,
+        paint: {
+          'circle-radius': 5,
+          'circle-color': '#f59e0b',
+          'circle-stroke-color': '#ffffff',
+          'circle-stroke-width': 1,
+        },
+      });
+      map.setLayoutProperty(layerId, 'visibility', luminPortugalWeather ? 'visible' : 'none');
+    };
+    let cities: City[] = [];
+    const refresh = () => sync(cities);
+    fetch('/api/lumin/portugal/cities', { signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) throw new Error('IPMA catalogue unavailable');
+        return response.json();
+      })
+      .then(result => {
+        if (disposed) return;
+        cities = Array.isArray(result.cities) ? result.cities : [];
+        refresh();
+      })
+      .catch(() => { /* Keep original globe usable if IPMA is unavailable. */ });
+    const onClick = (event: maplibregl.MapMouseEvent) => {
+      if (!map.getLayer(layerId) || !luminPortugalWeather) return;
+      const feature = map.queryRenderedFeatures(event.point, { layers: [layerId] })[0];
+      if (!feature) return;
+      const name = String(feature.properties?.name ?? 'Portugal');
+      const cityId = String(feature.properties?.cityId ?? '');
+      new maplibregl.Popup({ closeOnClick: true })
+        .setLngLat(event.lngLat)
+        .setText('IPMA · ' + name + ' — previsão disponível no painel LUMIN · PORTUGAL.')
+        .addTo(map);
+      window.dispatchEvent(new CustomEvent('lumin:select-ipma-city', { detail: { cityId } }));
+    };
+    if (map.isStyleLoaded()) refresh();
+    map.on('style.load', refresh);
+    map.on('click', onClick);
+    return () => {
+      disposed = true;
+      controller.abort();
+      map.off('style.load', refresh);
+      map.off('click', onClick);
+    };
+  }, [mapReady, luminPortugalWeather]);
+
+  // Opt-in location inspection: coordinates only; never identify household subscribers.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const onInspect = (event: Event) => {
+      const detail = (event as CustomEvent<{ enabled?: boolean }>).detail;
+      if (!detail?.enabled) return;
+      const onClick = (click: maplibregl.MapMouseEvent) => {
+        const { lat, lng } = click.lngLat;
+        if (lat < 32 || lat > 43 || lng < -32 || lng > -5) return;
+        window.dispatchEvent(new CustomEvent('lumin:telecom-location', { detail: { lat, lng } }));
+      };
+      map.once('click', onClick);
+      window.dispatchEvent(new CustomEvent('lumin:telecom-inspect-armed'));
+    };
+    window.addEventListener('lumin:telecom-inspect', onInspect);
+    return () => window.removeEventListener('lumin:telecom-inspect', onInspect);
+  }, [mapReady]);
+
+  // Official ANACOM coverage comparison: two read-only raster overlays.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    let selection: [number | null, number | null] = [null, null];
+    const render = () => {
+      if (!map.isStyleLoaded()) return;
+      selection.forEach((selected, index) => {
+        const sourceId = 'lumin-anacom-' + index;
+        const layerId = sourceId + '-raster';
+        if (map.getLayer(layerId)) map.removeLayer(layerId);
+        if (map.getSource(sourceId)) map.removeSource(sourceId);
+        if (selected === null) return;
+        const url = 'https://geo.anacom.pt/server/rest/services/publico/CoberturaQoS_Pub/MapServer/export'
+          + '?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256%2C256'
+          + '&format=png32&transparent=true&f=image&layers=show%3A' + selected;
+        map.addSource(sourceId, { type: 'raster', tiles: [url], tileSize: 256 });
+        map.addLayer({
+          id: layerId, type: 'raster', source: sourceId,
+          paint: { 'raster-opacity': index === 0 ? 0.6 : 0.36 },
+        });
+      });
+    };
+    const onCoverage = (event: Event) => {
+      const detail = (event as CustomEvent<{ enabled?: boolean; layerId?: number | null; compareLayerId?: number | null }>).detail;
+      selection = detail?.enabled
+        ? [typeof detail.layerId === 'number' ? detail.layerId : null,
+           typeof detail.compareLayerId === 'number' ? detail.compareLayerId : null]
+        : [null, null];
+      render();
+    };
+    window.addEventListener('lumin:telecom-coverage', onCoverage);
+    map.on('style.load', render);
+    return () => {
+      window.removeEventListener('lumin:telecom-coverage', onCoverage);
+      map.off('style.load', render);
+      for (let index = 0; index < 2; index++) {
+        const sourceId = 'lumin-anacom-' + index;
+        const layerId = sourceId + '-raster';
+        if (map.getLayer(layerId)) map.removeLayer(layerId);
+        if (map.getSource(sourceId)) map.removeSource(sourceId);
+      }
+    };
+  }, [mapReady]);
 
   // Do not replay an earlier explicit zoom request after theme/retry remounts.
   const lastTerrainFocus = useRef(terrainFocus);

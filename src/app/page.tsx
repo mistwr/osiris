@@ -26,6 +26,8 @@ import GlobalStatusBar from '@/components/GlobalStatusBar';
 import LiveAlerts from '@/components/LiveAlerts';
 import WorldRemote from '@/components/WorldRemote';
 import ArcGISPanel from '@/components/ArcGISPanel';
+import LuminPortugalWeather from '@/components/lumin/LuminPortugalWeather';
+import PortugalCameras from '@/components/lumin/PortugalCameras';
 const OsirisMap = dynamic(() => import('@/components/OsirisMap'), { ssr: false });
 const LayerPanel = dynamic(() => import('@/components/LayerPanel'));
 const SpaceCam = dynamic(() => import('@/components/SpaceCam'), { ssr: false });
@@ -1461,13 +1463,13 @@ export default function Dashboard() {
 
             {/* ── OSIRIS title — letter-by-letter stagger ── */}
             <div className="flex items-center gap-[2px] mb-3 z-[2]">
-              {'OSIRIS'.split('').map((letter, i) => (
+              {'LUMIN AI VISION'.split('').map((letter, i) => (
                 <motion.span
                   key={i}
                   initial={{ opacity: 0, y: 20, filter: 'blur(8px)' }}
                   animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                   transition={{ delay: 0.5 + i * 0.08, duration: 0.5, ease: 'easeOut' }}
-                  className="text-4xl md:text-5xl font-bold tracking-[0.5em] font-mono"
+                  className="text-xl md:text-4xl font-bold tracking-[0.18em] font-mono"
                   style={{ color: 'var(--text-heading)', textShadow: '0 0 30px rgba(212,175,55,0.2)' }}
                 >
                   {letter}
@@ -1484,7 +1486,7 @@ export default function Dashboard() {
                 className="overflow-hidden whitespace-nowrap"
               >
                 <p className="text-[11px] md:text-[10px] font-mono tracking-[0.5em] text-[var(--gold-primary)]" style={{ opacity: 0.8 }}>
-                  GLOBAL INTELLIGENCE PLATFORM
+                  INTELIGÊNCIA GEOGRÁFICA · LUMIN AI
                 </p>
               </motion.div>
             </div>
@@ -1555,9 +1557,17 @@ export default function Dashboard() {
 
 
 
+      <PortugalCameras cameras={Array.isArray(data?.cameras) ? data.cameras : []}
+        onLocate={(lat, lng) => {
+          setFlyToLocation({ lat, lng, zoom: 8, duration: 2300, ts: Date.now() });
+          setActiveLayers(prev => ({ ...prev, cctv: true }));
+        }} />
+      <LuminPortugalWeather />
+
       {/* ── MAP ── */}
       <ErrorBoundary name="Map">
         <OsirisMap 
+          luminPortugalWeather={true}
           key={osirisTheme}
           data={data} 
           activeLayers={activeLayers} 

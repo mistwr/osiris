@@ -1,0 +1,24 @@
+name: Lumin OSIRIS integration checks
+on:
+  push:
+    branches: [lumin-osiris-portugal]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm test -- --run
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
