@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 
-type Camera = { id: string | number; lat?: number; lng?: number; lon?: number; name?: string; city?: string; country?: string; source?: string; feed_url?: string; stream_url?: string };
+type Camera = { id: string | number; lat?: number; lng?: number; lon?: number; name?: string; city?: string; country?: string; source?: string; feed_url?: string; stream_url?: string; external_url?: string };
 const inPortugal = (camera: Camera) => {
   const lat = Number(camera.lat);
   const lng = Number(camera.lng ?? camera.lon);
@@ -17,7 +17,7 @@ export default function PortugalCameras({ cameras, onLocate }: {
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const available = useMemo(() => cameras.filter(camera => inPortugal(camera) && Boolean(camera.feed_url || camera.stream_url)), [cameras]);
+  const available = useMemo(() => cameras.filter(camera => inPortugal(camera) && Boolean(camera.feed_url || camera.stream_url || camera.external_url)), [cameras]);
   const shown = useMemo(() => available.filter(camera =>
     [camera.name, camera.city, camera.source].some(value => String(value ?? '').toLocaleLowerCase('pt-PT').includes(search.toLocaleLowerCase('pt-PT')))
   ).slice(0, 80), [available, search]);
@@ -28,14 +28,14 @@ export default function PortugalCameras({ cameras, onLocate }: {
     </button>
     {open && <section className="mt-2 w-[min(90vw,350px)] max-h-[55dvh] overflow-y-auto rounded-xl border border-cyan-500/50 bg-slate-950/95 p-3 text-white shadow-xl">
       <h2 className="mb-1 text-base font-semibold">Portugal no globo</h2>
-      <p className="mb-2 text-slate-300">{available.length} câmaras com URL de feed no catálogo mundial. A disponibilidade da transmissão não é garantida.</p>
+      <p className="mb-2 text-slate-300">{available.length} câmaras com URL de feed no catálogo mundial. Cada entrada tem uma ligação própria; a disponibilidade da transmissão não é garantida.</p>
       <input type="search" aria-label="Pesquisar câmaras de Portugal" placeholder="Pesquisar cidade ou câmara" value={search} onChange={event => setSearch(event.target.value)}
         className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-800 p-2 text-white"/>
       {shown.map(camera => <button key={camera.id} type="button"
         onClick={() => onLocate(Number(camera.lat), Number(camera.lng ?? camera.lon))}
         className="mb-1 flex w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-900 p-2 text-left">
         <span><strong>{camera.name || camera.city || 'Câmara pública'}</strong><span className="block text-slate-400">{camera.city || camera.source || 'Portugal'}</span></span>
-        <span className="ml-2 text-cyan-300">Ver ↗</span>
+        <span className="ml-2 text-cyan-300">Localizar ↗</span>
       </button>)}
       {shown.length === 0 && <p className="p-2 text-slate-400">Não existem câmaras correspondentes no catálogo carregado. Não serão criados pins fictícios.</p>}
       <p className="mt-2 text-slate-400">Inclui continente, Madeira e Açores. Apenas fontes públicas integradas no catálogo mundial.</p>
