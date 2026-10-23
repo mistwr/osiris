@@ -297,7 +297,11 @@ export const EUROPE_PUBLIC_WEBCAMS: CctvCamera[] = [
   // ── Norway (2) ──
   { id: 'pubcam-norway-kirkenes-s-r-varanger-kirkenes', lat: 69.727148, lng: 30.044897, name: 'Sør-Varanger Kirkenes', city: 'Kirkenes', country: 'Norway', external_url: 'https://www.youtube.com/@sr-varangerkommune5151/live', source: 'Public Webcam' },
   { id: 'pubcam-norway-nordkapp-northcape-seafishing', lat: 71.169951, lng: 25.785889, name: 'NorthCape Seafishing', city: 'Nordkapp', country: 'Norway', external_url: 'https://www.youtube.com/@Nordkapp_Havfiske/live', source: 'Public Webcam' },
-  // ── Portugal (3) ──
+  // ── Portugal (6) ──
+  // Individual public operator pages. Not embedded or claimed to be continuously live.
+  { id: 'pubcam-pt-matosinhos-beachcam', lat: 41.176, lng: -8.694, name: 'Matosinhos · Beachcam', city: 'Matosinhos', country: 'Portugal', external_url: 'https://back-office.beachcam.pt/livecams/praia-de-matosinhos/', source: 'MEO Beachcam' },
+  { id: 'pubcam-pt-nazare-norte-beachcam', lat: 39.608, lng: -9.084, name: 'Nazaré · Praia do Norte Panorâmica', city: 'Nazaré', country: 'Portugal', external_url: 'https://back-office.beachcam.pt/livecams/praia-do-norte/', source: 'MEO Beachcam' },
+  { id: 'pubcam-pt-espinho-beachcam', lat: 41.008, lng: -8.649, name: 'Espinho · Panorâmica', city: 'Espinho', country: 'Portugal', external_url: 'https://back-office.beachcam.pt/livecams/praia-de-espinho/', source: 'MEO Beachcam' },
   { id: 'pubcam-portugal-aeroporto-da-madeira-madeira-airport-live', lat: 32.698962, lng: -16.773031, name: 'Madeira Airport Live', city: 'Aeroporto da Madeira', country: 'Portugal', external_url: 'https://www.youtube.com/@madeiraairportlive/live', source: 'Public Webcam' },
   { id: 'pubcam-portugal-aeroporto-humberto-delgado-lisbon-airport-wings', lat: 38.780998, lng: -9.131861, name: 'Lisbon Airport Wings', city: 'Aeroporto Humberto Delgado', country: 'Portugal', external_url: 'https://www.youtube.com/@AirportWingsLisbon/live', source: 'Public Webcam' },
   { id: 'pubcam-portugal-funchal-madeira-web-live', lat: 32.64965, lng: -16.908678, name: 'Madeira Web Live', city: 'Funchal', country: 'Portugal', external_url: 'https://www.youtube.com/@MadeiraWebLive/live', source: 'Public Webcam' },
